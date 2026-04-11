@@ -7,8 +7,11 @@ from routers import indices, sectors, signals, stocks, news
 from routers import symbols as symbols_router
 from routers import settings as settings_router
 from routers import backtest as backtest_router
+from routers import trade_log as trade_log_router
 from routers.ws import router as ws_router, broadcast_loop
 from services.market_data import start_background_refresh
+from services.position_monitor import start_position_monitor
+from services.trade_log import init_db
 
 logging.basicConfig(
   level=logging.INFO,
@@ -23,8 +26,10 @@ logging.getLogger('peewee').setLevel(logging.WARNING)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+  init_db()
   await start_background_refresh()
   asyncio.create_task(broadcast_loop())
+  await start_position_monitor()
   yield
 
 
@@ -44,7 +49,8 @@ app.include_router(stocks.router,           prefix='/api/v1/stocks',   tags=['st
 app.include_router(news.router,             prefix='/api/v1/news',     tags=['news'])
 app.include_router(symbols_router.router,   prefix='/api/v1/symbols',   tags=['symbols'])
 app.include_router(settings_router.router,  prefix='/api/v1/settings',  tags=['settings'])
-app.include_router(backtest_router.router,  prefix='/api/v1/backtest',  tags=['backtest'])
+app.include_router(backtest_router.router,   prefix='/api/v1/backtest',   tags=['backtest'])
+app.include_router(trade_log_router.router, prefix='/api/v1/trade-log', tags=['trade-log'])
 app.include_router(ws_router,               tags=['websocket'])
 
 

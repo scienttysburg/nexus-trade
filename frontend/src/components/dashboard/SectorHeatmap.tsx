@@ -17,19 +17,29 @@ const BAR_COLOR: Record<SectorData['signal'], string> = {
   strong_buy: '#3fb950', buy: '#3fb950', hold: '#d29922', sell: '#f85149', strong_sell: '#f85149',
 }
 
-export default function SectorHeatmap({ sectors }: { sectors: SectorData[] }) {
+interface Props {
+  sectors: SectorData[]
+  onSectorClick?: (sectorName: string) => void
+}
+
+export default function SectorHeatmap({ sectors, onSectorClick }: Props) {
   return (
     <div className='bg-card border border-dim rounded-lg p-4'>
       <div className='flex items-center justify-between mb-3'>
         <h2 className='text-sm font-semibold text-[#e6edf3]'>セクター別強弱マップ</h2>
-        <span className='text-[10px] text-[#8b949e]'>{sectors.length} セクター</span>
+        <span className='text-[10px] text-[#8b949e]'>
+          {sectors.length} セクター
+          {onSectorClick && ' ／ クリックで詳細'}
+        </span>
       </div>
       <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2'>
         {sectors.map(s => (
           <div
             key={s.code}
+            onClick={() => onSectorClick?.(s.name)}
             className={clsx(
-              'border rounded-lg p-2.5 flex flex-col gap-1 transition-all duration-200 hover:scale-[1.03] hover:shadow-lg cursor-default',
+              'border rounded-lg p-2.5 flex flex-col gap-1 transition-all duration-200 hover:scale-[1.03] hover:shadow-lg',
+              onSectorClick ? 'cursor-pointer' : 'cursor-default',
               SIGNAL_STYLE[s.signal]
             )}
           >
@@ -38,7 +48,6 @@ export default function SectorHeatmap({ sectors }: { sectors: SectorData[] }) {
               {s.change_pct >= 0 ? '+' : ''}{s.change_pct.toFixed(2)}%
             </span>
 
-            {/* 変動率バー */}
             <div className='h-0.5 bg-black/20 rounded-full overflow-hidden'>
               <div
                 className='h-full rounded-full'

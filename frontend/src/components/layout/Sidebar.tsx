@@ -4,9 +4,12 @@ import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
 
 const NAV = [
-  { href: '/',          label: 'ダッシュボード',       icon: '▦' },
-  { href: '/screener',  label: 'シグナルスクリーナー', icon: '⚡' },
-  { href: '/settings',  label: '設定',                 icon: '⚙' },
+  { href: '/',          label: 'Market Pulse',  sub: 'ダッシュボード',  icon: '◉' },
+  { href: '/screener',  label: 'Signal Radar',  sub: 'シグナル一覧',    icon: '⚡' },
+  { href: '/sectors',   label: 'Sector Matrix', sub: 'セクター分析',    icon: '▦' },
+  { href: '/news',      label: 'Market Intel',  sub: 'AIニュース',      icon: '◎' },
+  { href: '/watchlist', label: 'Watchlist',     sub: 'お気に入り',      icon: '★' },
+  { href: '/trade-log', label: 'Trade Log',     sub: 'ポジション管理',  icon: '₿' },
 ]
 
 export default function Sidebar() {
@@ -17,26 +20,45 @@ export default function Sidebar() {
         <span className='text-accent font-bold text-lg tracking-wide'>NEXUS</span>
         <span className='text-[#e6edf3] font-bold text-lg'> TRADE</span>
       </div>
-      <nav className='flex flex-col gap-1 p-3 flex-1'>
-        {NAV.map(({ href, label, icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={clsx(
-              'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors',
-              path === href
-                ? 'bg-[#1c2128] text-accent font-medium'
-                : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#1c2128]'
-            )}
-          >
-            <span className='text-base'>{icon}</span>
-            {label}
-          </Link>
-        ))}
+      <nav className='flex flex-col gap-0.5 p-2 flex-1'>
+        {NAV.map(({ href, label, sub, icon }) => {
+          const active = href === '/' ? path === '/' : path.startsWith(href)
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={clsx(
+                'flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors',
+                active
+                  ? 'bg-[#1c2128] text-accent'
+                  : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#1c2128]'
+              )}
+            >
+              <span className='text-base w-4 text-center shrink-0'>{icon}</span>
+              <div className='min-w-0'>
+                <p className={clsx('text-xs font-semibold leading-tight', active ? 'text-accent' : '')}>
+                  {label}
+                </p>
+                <p className='text-[10px] text-[#8b949e] leading-tight'>{sub}</p>
+              </div>
+            </Link>
+          )
+        })}
       </nav>
-      <div className='px-4 py-3 border-t border-dim flex items-center justify-between'>
-        <span className='text-[10px] text-[#8b949e]'>Nexus Trade</span>
-        <span className='text-[10px] font-mono text-[#30363d] bg-[#1c2128] px-1.5 py-0.5 rounded'>v0.3.0</span>
+      <div className='px-3 py-2 border-t border-dim'>
+        <Link
+          href='/settings'
+          className={clsx(
+            'flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors text-[10px]',
+            path === '/settings' ? 'text-accent bg-[#1c2128]' : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#1c2128]'
+          )}
+        >
+          <span>⚙</span>
+          <span>設定</span>
+        </Link>
+        <div className='px-3 pt-1 flex items-center justify-between'>
+          <span className='text-[10px] text-[#30363d]'>v0.4.0</span>
+        </div>
       </div>
     </aside>
   )

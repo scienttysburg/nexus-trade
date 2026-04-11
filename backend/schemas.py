@@ -49,6 +49,7 @@ class SignalData(BaseModel):
   vwap_dev: float  # VWAP乖離率(%)
   timing: str
   market: str  # 'JP' | 'US'
+  prepost_flag: str | None = None  # 'Pre' | 'Post' | None
 
 
 class OHLCVData(BaseModel):
@@ -67,6 +68,53 @@ class NewsItem(BaseModel):
   sentiment_score: float  # -1.0 to 1.0
   published_at: str
   source: str
+  impact: str = 'low'        # 'high' | 'medium' | 'low'
+  is_noise: bool = False
+
+
+class TradePositionCreate(BaseModel):
+  ticker: str
+  name: str = ''
+  market: str = 'JP'
+  entry_date: str
+  entry_price: float
+  shares: float = 1
+  take_profit: float | None = None
+  stop_loss: float | None = None
+  notes: str = ''
+
+
+class TradePositionUpdate(BaseModel):
+  take_profit: float | None = None
+  stop_loss: float | None = None
+  notes: str | None = None
+  status: str | None = None     # 'open' | 'closed'
+  exit_date: str | None = None
+  exit_price: float | None = None
+
+  def model_post_init(self, __context) -> None:
+    if self.status is not None and self.status not in ('open', 'closed'):
+      raise ValueError(f'status must be "open" or "closed", got: {self.status!r}')
+
+
+class TradePosition(BaseModel):
+  id: int
+  ticker: str
+  name: str
+  market: str
+  entry_date: str
+  entry_price: float
+  shares: float
+  take_profit: float | None
+  stop_loss: float | None
+  notes: str
+  status: str
+  exit_date: str | None
+  exit_price: float | None
+  created_at: str
+  current_price: float | None = None
+  pnl_pct: float | None = None
+  pnl_amount: float | None = None
 
 
 class StockDetail(BaseModel):

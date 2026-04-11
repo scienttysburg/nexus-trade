@@ -8,6 +8,7 @@ settings.local.json
 # 仕様書
 仕様書.md
 仕様書2.md
+仕様書3.md
 
 # Python
 **/__pycache__/
@@ -18,6 +19,7 @@ backend/.env
 
 # ランタイム生成ファイル
 backend/app_config.json
+backend/trade_log.db
 
 # Node.js
 frontend/node_modules/

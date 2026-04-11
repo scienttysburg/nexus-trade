@@ -29,6 +29,7 @@ export interface SignalData {
   vwap_dev: number
   timing: string
   market: 'JP' | 'US'
+  prepost_flag?: 'Pre' | 'Post' | null
 }
 
 export interface OHLCVData {
@@ -47,6 +48,40 @@ export interface NewsItem {
   sentiment_score: number
   published_at: string
   source: string
+  impact: 'high' | 'medium' | 'low'
+  is_noise: boolean
+}
+
+export interface TradePosition {
+  id: number
+  ticker: string
+  name: string
+  market: string
+  entry_date: string
+  entry_price: number
+  shares: number
+  take_profit: number | null
+  stop_loss: number | null
+  notes: string
+  status: 'open' | 'closed'
+  exit_date: string | null
+  exit_price: number | null
+  created_at: string
+  current_price: number | null
+  pnl_pct: number | null
+  pnl_amount: number | null
+}
+
+export interface TradePositionCreate {
+  ticker: string
+  name?: string
+  market?: string
+  entry_date: string
+  entry_price: number
+  shares: number
+  take_profit?: number | null
+  stop_loss?: number | null
+  notes?: string
 }
 
 export interface StockDetail {
@@ -171,4 +206,19 @@ export const api = {
     const q = new URLSearchParams(params as Record<string, string> ?? {}).toString()
     return get<BacktestResult>(`/backtest/${ticker}${q ? `?${q}` : ''}`)
   },
+
+  // ニュース (curated)
+  curatedNews: () => get<NewsItem[]>('/news/market'),
+
+  // Trade Log
+  getPositions:    (status?: 'open' | 'closed') => {
+    const q = status ? `?status=${status}` : ''
+    return get<TradePosition[]>(`/trade-log${q}`)
+  },
+  addPosition:     (body: TradePositionCreate) =>
+    mutate<TradePosition>('POST', '/trade-log', body),
+  updatePosition:  (id: number, patch: Partial<TradePositionCreate & { status?: string; exit_price?: number; exit_date?: string }>) =>
+    mutate<TradePosition>('PATCH', `/trade-log/${id}`, patch),
+  deletePosition:  (id: number) =>
+    mutate<{ id: number; status: string }>('DELETE', `/trade-log/${id}`),
 }

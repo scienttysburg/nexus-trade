@@ -51,6 +51,51 @@ _NEGATIVE: list[str] = [
 _STRONG_POSITIVE = {'最高益', '過去最高', '上方修正', '急騰', 'record high', 'beat', 'surge', 'raised guidance'}
 _STRONG_NEGATIVE = {'下方修正', '赤字', '不正', 'リコール', '急落', 'miss', 'loss', 'downgrade', 'lawsuit'}
 
+# ───────────────────────── インパクトスコア辞書 ─────────────────────────
+
+_HIGH_IMPACT_WORDS: list[str] = [
+  # 日本語
+  '決算', '業績修正', '上方修正', '下方修正', 'M&A', '買収', '合併', '倒産', '破綻',
+  '増資', '公募', 'TOB', 'MBO', '上場廃止', '株式分割', '特別損失', '特損',
+  '経営統合', 'リストラ', '大規模リストラ', '緊急声明',
+  # English
+  'earnings', 'guidance', 'merger', 'acquisition', 'bankruptcy', 'ipo',
+  'federal reserve', 'fed rate', 'fomc', 'interest rate', 'inflation', 'cpi', 'gdp',
+  'sec investigation', 'fda approval', 'quarterly results', 'annual report',
+  'profit warning', 'revenue miss', 'revenue beat', 'dividend cut', 'stock split',
+]
+
+_MEDIUM_IMPACT_WORDS: list[str] = [
+  # 日本語
+  '新製品', '提携', '承認', '量産', '受注', '配当', '株主優待', '自社株買い',
+  '人事', '社長交代', 'CEO', '工場', '開発', '投資', '契約',
+  # English
+  'partnership', 'launch', 'product', 'dividend', 'regulatory', 'approval',
+  'investment', 'contract', 'deal', 'expansion', 'hiring', 'ceo',
+]
+
+_NOISE_WORDS: list[str] = [
+  # 日本語 - 株価と無関係なゴシップ・エンタメ
+  '芸能', 'アイドル', '映画', 'ドラマ', 'サッカー', '野球', '相撲',
+  'グルメ', 'レシピ', 'ゴシップ', '恋愛', '結婚', '離婚',
+  '旅行', '観光', 'レジャー', '動物', '占い',
+  # English (具体的フレーズのみ。単語単位で誤マッチしないよう2語以上)
+  'celebrity gossip', 'sports score', 'box score', 'movie review',
+  'travel guide', 'fashion week', 'dating tips', 'viral video',
+]
+
+
+def calc_impact(text: str) -> tuple[str, bool]:
+  """(impact_level, is_noise) を返す。impact は 'high' | 'medium' | 'low'。"""
+  t = text.lower()
+  if any(w in t for w in _NOISE_WORDS):
+    return 'low', True
+  if any(w in t for w in _HIGH_IMPACT_WORDS):
+    return 'high', False
+  if any(w in t for w in _MEDIUM_IMPACT_WORDS):
+    return 'medium', False
+  return 'low', False
+
 
 def calc_sentiment(text: str) -> tuple[str, float]:
   """(label, score) を返す。score は -1.0 〜 1.0。"""
@@ -101,6 +146,7 @@ def _fetch_rss(feed: dict) -> list[NewsItem]:
       summary = getattr(entry, 'summary', '') or ''
       text = title + ' ' + summary
       label, score = calc_sentiment(text)
+      impact, is_noise = calc_impact(text)
       items.append(NewsItem(
         id=i,
         title=title.strip(),
@@ -108,6 +154,8 @@ def _fetch_rss(feed: dict) -> list[NewsItem]:
         sentiment_score=score,
         published_at=_parse_date(entry),
         source=feed['source'],
+        impact=impact,
+        is_noise=is_noise,
       ))
     return items
   except Exception as e:
@@ -162,6 +210,7 @@ def fetch_ticker_news(ticker: str) -> list[NewsItem]:
     if not title:
       continue
     label, score = calc_sentiment(title)
+    impact, is_noise = calc_impact(title)
     ts = n.get('providerPublishTime', 0)
     try:
       pub = datetime.fromtimestamp(ts, tz=timezone.utc).strftime('%Y-%m-%d %H:%M')
@@ -174,6 +223,8 @@ def fetch_ticker_news(ticker: str) -> list[NewsItem]:
       sentiment_score=score,
       published_at=pub,
       source=n.get('publisher', '—'),
+      impact=impact,
+      is_noise=is_noise,
     ))
 
   if not items:

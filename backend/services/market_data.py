@@ -22,6 +22,25 @@ logger = logging.getLogger('nexus.market_data')
 # Yahoo Finance のレート制限を避けるため並列数を抑える (14 → 4)
 _executor = ThreadPoolExecutor(max_workers=4)
 
+
+def _get_us_prepost_flag() -> str | None:
+  """現在の米国時間を判定し、Pre/Post/None を返す。"""
+  from datetime import timedelta
+  utc_now = time.gmtime()
+  month = utc_now.tm_mon
+  hour_utc = utc_now.tm_hour + utc_now.tm_min / 60
+  wday = utc_now.tm_wday  # 0=Mon, 6=Sun
+  if wday >= 5:
+    return None
+  # DST: 3〜11月は ET=UTC-4、それ以外は ET=UTC-5
+  offset = -4 if 3 <= month <= 11 else -5
+  hour_et = (hour_utc + offset) % 24
+  if 4 <= hour_et < 9.5:
+    return 'Pre'
+  if 16 <= hour_et < 20:
+    return 'Post'
+  return None
+
 # ------------------- 内部ヘルパー -------------------
 
 def _market_of(ticker: str) -> str:
@@ -97,6 +116,8 @@ def _build_signal(ticker: str, df: pd.DataFrame, t: yf.Ticker) -> SignalData | N
     macd_positive = macd_val > 0
     market        = _market_of(ticker)
 
+    prepost_flag = _get_us_prepost_flag() if market == 'US' else None
+
     return SignalData(
       ticker=ticker,
       name=symbol_store.get_ticker_name(ticker),
@@ -110,6 +131,7 @@ def _build_signal(ticker: str, df: pd.DataFrame, t: yf.Ticker) -> SignalData | N
       vwap_dev=round(vwap_dev, 2),
       timing=get_timing(score, macd_positive, market),
       market=market,
+      prepost_flag=prepost_flag,
     )
   except Exception as e:
     logger.error(f'[build_signal] {ticker}: {e}')

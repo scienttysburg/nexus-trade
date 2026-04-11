@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import clsx from 'clsx'
 import StockChart from '@/components/symbol/StockChart'
 import BacktestCard from '@/components/symbol/BacktestCard'
+import PinButton from '@/components/watchlist/PinButton'
 
 const SIGNAL_STYLE: Record<string, string> = {
   'Strong Buy': 'text-buy border-buy bg-[#1a4731]',
@@ -112,6 +113,7 @@ export default async function SymbolPage({ params }: { params: { ticker: string 
           </div>
 
           <div className='flex items-start gap-4'>
+            <PinButton ticker={stock.ticker} />
             <div className='text-right'>
               <p className='font-mono text-3xl font-bold text-[#e6edf3] leading-none'>
                 {stock.price.toLocaleString('ja-JP')}

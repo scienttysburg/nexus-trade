@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import clsx from 'clsx'
 import type { SignalData } from '@/lib/api'
@@ -39,16 +39,30 @@ export default function SignalTable({ initialData }: { initialData: SignalData[]
   const [filter, setFilter] = useState<Filter>('all')
   const [sortBy, setSortBy] = useState<SortKey>('score')
   const [market, setMarket] = useState<'all' | 'JP' | 'US'>('all')
+  const [query, setQuery] = useState('')
 
-  let data = [...initialData]
-  if (filter === 'buy')  data = data.filter(s => s.signal === 'Strong Buy' || s.signal === 'Buy')
-  if (filter === 'sell') data = data.filter(s => s.signal === 'Sell' || s.signal === 'Strong Sell')
-  if (market !== 'all')  data = data.filter(s => s.market === market)
-  data.sort((a, b) =>
-    sortBy === 'score'      ? b.score - a.score :
-    sortBy === 'change_pct' ? b.change_pct - a.change_pct :
-                              a.rsi - b.rsi
-  )
+  const data = useMemo(() => {
+    let d = [...initialData]
+    if (filter === 'buy')  d = d.filter(s => s.signal === 'Strong Buy' || s.signal === 'Buy')
+    if (filter === 'sell') d = d.filter(s => s.signal === 'Sell' || s.signal === 'Strong Sell')
+    if (market !== 'all')  d = d.filter(s => s.market === market)
+
+    if (query.trim()) {
+      const q = query.trim().toLowerCase()
+      d = d.filter(s =>
+        s.ticker.toLowerCase().includes(q) ||
+        s.name.toLowerCase().includes(q) ||
+        s.sector.toLowerCase().includes(q)
+      )
+    }
+
+    d.sort((a, b) =>
+      sortBy === 'score'      ? b.score - a.score :
+      sortBy === 'change_pct' ? b.change_pct - a.change_pct :
+                                a.rsi - b.rsi
+    )
+    return d
+  }, [initialData, filter, sortBy, market, query])
 
   return (
     <div className='bg-card border border-dim rounded-lg'>
@@ -82,6 +96,17 @@ export default function SignalTable({ initialData }: { initialData: SignalData[]
         </div>
       </div>
 
+      {/* 検索バー */}
+      <div className='px-4 py-2.5 border-b border-dim'>
+        <input
+          type='text'
+          placeholder='銘柄名 / ティッカー / セクターで検索...'
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          className='w-full max-w-md px-3 py-1.5 text-xs bg-[#0d1117] border border-dim rounded-md text-[#e6edf3] placeholder-[#8b949e] focus:outline-none focus:border-accent transition-colors'
+        />
+      </div>
+
       {/* テーブル */}
       <div className='overflow-x-auto'>
         <table className='w-full text-sm min-w-[720px]'>
@@ -104,6 +129,11 @@ export default function SignalTable({ initialData }: { initialData: SignalData[]
                 <td className='px-3 py-2.5 text-xs text-[#8b949e] whitespace-nowrap'>{s.sector}</td>
                 <td className='px-3 py-2.5 font-mono text-sm text-[#e6edf3] whitespace-nowrap'>
                   {s.price.toLocaleString('ja-JP')}
+                  {s.prepost_flag && (
+                    <span className='ml-1 text-[9px] bg-hold/20 text-hold border border-hold/30 px-1 py-0.5 rounded'>
+                      {s.prepost_flag}
+                    </span>
+                  )}
                 </td>
                 <td className={clsx('px-3 py-2.5 font-mono text-sm font-medium whitespace-nowrap', s.change_pct >= 0 ? 'text-buy' : 'text-sell')}>
                   {s.change_pct >= 0 ? '+' : ''}{s.change_pct.toFixed(2)}%
@@ -135,7 +165,9 @@ export default function SignalTable({ initialData }: { initialData: SignalData[]
         {data.length === 0 && (
           <div className='py-16 text-center'>
             <p className='text-[#8b949e] text-sm'>条件に合う銘柄がありません</p>
-            <p className='text-[#8b949e] text-xs mt-1'>フィルターを変更してください</p>
+            <p className='text-[#8b949e] text-xs mt-1'>
+              {query ? '検索ワードを変更してください' : 'フィルターを変更してください'}
+            </p>
           </div>
         )}
       </div>
