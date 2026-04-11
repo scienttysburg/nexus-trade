@@ -1,0 +1,25 @@
+nexus-trade.code-workspace
+settings.local.json
+.DS_Store
+
+# Claude Code ローカル設定
+.claude/
+
+# 仕様書
+仕様書.md
+仕様書2.md
+
+# Python
+**/__pycache__/
+**/*.pyc
+backend/.venv/
+backend/venv/
+backend/.env
+
+# Node.js
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+
+# その他
+*.log
