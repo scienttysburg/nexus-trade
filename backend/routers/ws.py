@@ -12,6 +12,7 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+import app_settings
 from services.market_data import fetch_all_signals, fetch_indices
 
 router = APIRouter()
@@ -96,10 +97,11 @@ async def websocket_endpoint(ws: WebSocket):
 
 
 async def broadcast_loop() -> None:
-  """30 秒ごとに全接続クライアントへ最新データをブロードキャスト。"""
+  """設定された間隔で全接続クライアントへ最新データをブロードキャスト。"""
   loop = asyncio.get_event_loop()
   while True:
-    await asyncio.sleep(30)
+    interval = app_settings.get()['broadcast_interval']
+    await asyncio.sleep(interval)
     if manager.count == 0:
       continue
     try:

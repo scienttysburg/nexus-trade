@@ -4,8 +4,9 @@ import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
 
 const NAV = [
-  { href: '/',          label: 'ダッシュボード', icon: '▦' },
+  { href: '/',          label: 'ダッシュボード',       icon: '▦' },
   { href: '/screener',  label: 'シグナルスクリーナー', icon: '⚡' },
+  { href: '/settings',  label: '設定',                 icon: '⚙' },
 ]
 
 export default function Sidebar() {

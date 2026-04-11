@@ -81,6 +81,40 @@ async function get<T>(path: string): Promise<T> {
   return res.json()
 }
 
+export interface SymbolEntry {
+  ticker: string
+  name: string
+  sector: string
+  enabled: boolean
+}
+
+export interface SymbolsData {
+  jp: SymbolEntry[]
+  us: SymbolEntry[]
+}
+
+export interface AppSettings {
+  refresh_interval: number
+  broadcast_interval: number
+  discord_webhook: string
+  slack_webhook: string
+  webhook_enabled: boolean
+  webhook_score_threshold: number
+}
+
+async function mutate<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const res = await fetch('/api/v1' + path, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(err.detail ?? `API error: ${res.status}`)
+  }
+  return res.json()
+}
+
 export const api = {
   indices:    () => get<IndexData[]>('/indices'),
   sectors:    () => get<SectorData[]>('/sectors'),
@@ -92,4 +126,18 @@ export const api = {
   newsTicker:  () => get<string[]>('/news/ticker'),
   marketNews:  () => get<NewsItem[]>('/news/market'),
   stockNews:   (ticker: string) => get<NewsItem[]>(`/news/stock/${ticker}`),
+
+  // 銘柄管理
+  getSymbols:    () => get<SymbolsData>('/symbols'),
+  addSymbol:     (body: { ticker: string; name: string; sector: string; market: string }) =>
+    mutate<{ ticker: string; status: string }>('POST', '/symbols', body),
+  deleteSymbol:  (ticker: string) =>
+    mutate<{ ticker: string; status: string }>('DELETE', `/symbols/${ticker}`),
+  toggleSymbol:  (ticker: string, enabled: boolean) =>
+    mutate<{ ticker: string; enabled: boolean }>('PATCH', `/symbols/${ticker}`, { enabled }),
+
+  // アプリ設定
+  getSettings:    () => get<AppSettings>('/settings'),
+  updateSettings: (patch: Partial<AppSettings>) =>
+    mutate<AppSettings>('PATCH', '/settings', patch),
 }

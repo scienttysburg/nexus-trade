@@ -10,10 +10,9 @@ import pandas as pd
 import yfinance as yf
 
 import cache
-from config import (
-  INDEX_DISPLAY, INDEX_TICKERS,
-  JP_WATCHLIST, SECTOR_CODE, TICKER_NAME, TICKER_SECTOR, US_WATCHLIST,
-)
+import app_settings
+import symbol_store
+from config import INDEX_DISPLAY, INDEX_TICKERS, SECTOR_CODE
 from schemas import IndexData, NewsItem, OHLCVData, SectorData, SignalData, StockDetail
 from services.indicators import calc_ma, calc_macd, calc_rsi, calc_vwap
 from services.scoring import build_timing_advice, calc_score, get_signal_label, get_timing
@@ -26,7 +25,7 @@ _executor = ThreadPoolExecutor(max_workers=4)
 # ------------------- 内部ヘルパー -------------------
 
 def _market_of(ticker: str) -> str:
-  return 'JP' if ticker in JP_WATCHLIST else 'US'
+  return symbol_store.get_market(ticker)
 
 
 def _fetch_history(
@@ -100,8 +99,8 @@ def _build_signal(ticker: str, df: pd.DataFrame, t: yf.Ticker) -> SignalData | N
 
     return SignalData(
       ticker=ticker,
-      name=TICKER_NAME.get(ticker, ticker),
-      sector=TICKER_SECTOR.get(ticker, 'その他'),
+      name=symbol_store.get_ticker_name(ticker),
+      sector=symbol_store.get_ticker_sector(ticker),
       price=round(current, 2),
       change_pct=round(change_pct, 2),
       signal=signal,
@@ -119,13 +118,8 @@ def _build_signal(ticker: str, df: pd.DataFrame, t: yf.Ticker) -> SignalData | N
 
 # ------------------- 公開 API -------------------
 
-def fetch_all_signals() -> list[SignalData]:
-  """全ウォッチリストのシグナルを並列取得（キャッシュ付き）。"""
-  cached = cache.get('signals')
-  if cached is not None:
-    return cached
-
-  all_tickers = JP_WATCHLIST + US_WATCHLIST
+def _compute_signals() -> list[SignalData]:
+  all_tickers = symbol_store.get_watchlist()
   results: list[SignalData] = []
   futures = {_executor.submit(_fetch_history, t): t for t in all_tickers}
 
@@ -142,17 +136,29 @@ def fetch_all_signals() -> list[SignalData]:
 
   results.sort(key=lambda x: x.score, reverse=True)
   logger.info(f'[fetch_all_signals] {len(results)}/{len(all_tickers)} 銘柄を取得')
-  # 失敗時は短 TTL で次回即リトライ
-  cache.set('signals', results, ttl=60 if results else 10)
   return results
 
 
-def fetch_indices() -> list[IndexData]:
-  """主要インデックスを取得（キャッシュ付き）。"""
-  cached = cache.get('indices')
-  if cached is not None:
-    return cached
+def fetch_all_signals() -> list[SignalData]:
+  """全ウォッチリストのシグナルを並列取得（スタンピード防止キャッシュ付き）。"""
+  def _compute():
+    results = _compute_signals()
+    return results if results else []
 
+  results = cache.get_or_compute('signals', _compute, ttl=60)
+  return results or []
+
+
+def fetch_indices() -> list[IndexData]:
+  """主要インデックスを取得（スタンピード防止キャッシュ付き）。"""
+  def _compute():
+    return _compute_indices()
+
+  result = cache.get_or_compute('indices', _compute, ttl=60)
+  return result or []
+
+
+def _compute_indices() -> list[IndexData]:
   indices: list[IndexData] = []
   for symbol, yticker in INDEX_TICKERS.items():
     # インデックスは配当・分割調整不要。auto_adjust=False で実際の指数値を取得する。
@@ -180,10 +186,7 @@ def fetch_indices() -> list[IndexData]:
 
   if not indices:
     logger.error('[indices] すべての取得に失敗しました (Yahoo Finance 側の問題の可能性)')
-    cache.set('indices', [], ttl=10)
-    return []
 
-  cache.set('indices', indices, ttl=60)
   return indices
 
 
@@ -266,8 +269,8 @@ def fetch_stock_detail(ticker: str) -> StockDetail | None:
 
     detail = StockDetail(
       ticker=ticker,
-      name=TICKER_NAME.get(ticker, ticker),
-      sector=TICKER_SECTOR.get(ticker, 'その他'),
+      name=symbol_store.get_ticker_name(ticker),
+      sector=symbol_store.get_ticker_sector(ticker),
       price=round(current, 2),
       change_pct=round(change_pct, 2),
       signal=signal,
@@ -314,7 +317,8 @@ async def start_background_refresh() -> None:
 
   async def _loop() -> None:
     while True:
-      await asyncio.sleep(60)
+      interval = app_settings.get()['refresh_interval']
+      await asyncio.sleep(interval)
       try:
         cache.invalidate('indices')
         cache.invalidate('signals')

@@ -1,6 +1,23 @@
 from pydantic import BaseModel
 
 
+class SymbolEntry(BaseModel):
+  ticker: str
+  name: str
+  sector: str
+  market: str   # 'JP' | 'US'
+  enabled: bool
+
+
+class AppSettings(BaseModel):
+  refresh_interval: int    # バックグラウンドリフレッシュ間隔(秒)
+  broadcast_interval: int  # WebSocketブロードキャスト間隔(秒)
+  discord_webhook: str
+  slack_webhook: str
+  webhook_enabled: bool
+  webhook_score_threshold: int
+
+
 class IndexData(BaseModel):
   symbol: str
   name: str
