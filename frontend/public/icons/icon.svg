@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#161b22"/>
+  <rect width="512" height="512" rx="96" fill="url(#g)"/>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1c2128"/>
+      <stop offset="100%" stop-color="#0d1117"/>
+    </linearGradient>
+  </defs>
+  <!-- N の文字 -->
+  <text x="80" y="370" font-family="'Segoe UI',Arial,sans-serif" font-size="320" font-weight="800" fill="#58a6ff" letter-spacing="-10">N</text>
+  <!-- 右下アクセントライン -->
+  <line x1="80" y1="440" x2="432" y2="440" stroke="#3fb950" stroke-width="16" stroke-linecap="round"/>
+</svg>

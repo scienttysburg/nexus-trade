@@ -2,6 +2,7 @@ import { api } from '@/lib/api'
 import { notFound } from 'next/navigation'
 import clsx from 'clsx'
 import StockChart from '@/components/symbol/StockChart'
+import BacktestCard from '@/components/symbol/BacktestCard'
 
 const SIGNAL_STYLE: Record<string, string> = {
   'Strong Buy': 'text-buy border-buy bg-[#1a4731]',
@@ -145,6 +146,9 @@ export default async function SymbolPage({ params }: { params: { ticker: string 
         <h2 className='text-sm font-semibold text-accent mb-3'>⚡ エントリータイミング分析</h2>
         <pre className='text-sm text-[#c9d1d9] whitespace-pre-wrap font-sans leading-relaxed'>{stock.timing_advice}</pre>
       </div>
+
+      {/* バックテスト */}
+      <BacktestCard ticker={stock.ticker} />
 
       {/* 関連ニュース */}
       {stock.news.length > 0 && (

@@ -1,0 +1,29 @@
+{
+  "name": "Nexus Trade",
+  "short_name": "NexusTrade",
+  "description": "短期トレード特化型シグナル配信システム",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0d1117",
+  "theme_color": "#58a6ff",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "シグナルスクリーナー",
+      "short_name": "スクリーナー",
+      "url": "/screener",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
+    }
+  ],
+  "categories": ["finance", "productivity"]
+}

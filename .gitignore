@@ -16,6 +16,9 @@ backend/.venv/
 backend/venv/
 backend/.env
 
+# ランタイム生成ファイル
+backend/app_config.json
+
 # Node.js
 frontend/node_modules/
 frontend/.next/

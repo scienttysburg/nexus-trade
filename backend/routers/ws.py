@@ -14,6 +14,7 @@ from typing import Any
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import app_settings
 from services.market_data import fetch_all_signals, fetch_indices
+from services.notifier import notify_batch
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -112,5 +113,7 @@ async def broadcast_loop() -> None:
         'signals': [s.model_dump() for s in signals],
         'indices': [idx.model_dump() for idx in indices],
       })
+      # 閾値超えのシグナルを外部 Webhook へ通知 (非同期タスク)
+      asyncio.create_task(notify_batch(signals))
     except Exception as e:
       logger.error(f'[broadcast_loop] {e}')

@@ -32,10 +32,26 @@ export default function SettingsClient({ initialSymbols, initialSettings }: Prop
   const [toast, setToast]         = useState<{ msg: string; ok: boolean } | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  const [newTicker, setNewTicker] = useState('')
-  const [newName,   setNewName]   = useState('')
-  const [newSector, setNewSector] = useState(SECTOR_OPTIONS[0])
-  const [newMarket, setNewMarket] = useState<'JP' | 'US'>('JP')
+  const [newTicker,   setNewTicker]   = useState('')
+  const [newName,     setNewName]     = useState('')
+  const [newSector,   setNewSector]   = useState(SECTOR_OPTIONS[0])
+  const [newMarket,   setNewMarket]   = useState<'JP' | 'US'>('JP')
+  const [lookupState, setLookupState] = useState<'idle' | 'loading' | 'ok' | 'err'>('idle')
+
+  async function handleLookup() {
+    if (!newTicker.trim()) return
+    setLookupState('loading')
+    try {
+      const info = await api.lookupSymbol(newTicker.trim())
+      setNewTicker(info.ticker)
+      setNewName(info.name)
+      setNewSector(info.sector)
+      setNewMarket(info.market as 'JP' | 'US')
+      setLookupState('ok')
+    } catch {
+      setLookupState('err')
+    }
+  }
 
   function showToast(msg: string, ok = true) {
     setToast({ msg, ok })
@@ -120,33 +136,51 @@ export default function SettingsClient({ initialSymbols, initialSettings }: Prop
         <h2 className='text-base font-semibold text-[#e6edf3] mb-4'>銘柄管理</h2>
 
         {/* 追加フォーム */}
-        <div className='grid grid-cols-2 md:grid-cols-5 gap-2 mb-6'>
-          <input
-            className='input col-span-1 md:col-span-1'
-            placeholder='ティッカー (例: 9999.T)'
-            value={newTicker}
-            onChange={e => setNewTicker(e.target.value)}
-          />
-          <input
-            className='input col-span-1 md:col-span-1'
-            placeholder='銘柄名'
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-          />
-          <select className='input' value={newSector} onChange={e => setNewSector(e.target.value)}>
-            {SECTOR_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <select className='input' value={newMarket} onChange={e => setNewMarket(e.target.value as 'JP' | 'US')}>
-            <option value='JP'>日本株 (JP)</option>
-            <option value='US'>米国株 (US)</option>
-          </select>
-          <button
-            onClick={handleAddSymbol}
-            disabled={isPending}
-            className='btn-primary'
-          >
-            追加
-          </button>
+        <div className='space-y-2 mb-6 p-3 border border-dim rounded-md bg-[#0d1117]'>
+          <p className='text-xs text-[#8b949e]'>コードを入力して「自動取得」を押すと銘柄名・業種・市場が自動設定されます</p>
+          {/* ティッカー + 自動取得 */}
+          <div className='flex gap-2'>
+            <input
+              className='input flex-1'
+              placeholder='ティッカー (例: 7203 / NVDA / 8136.T)'
+              value={newTicker}
+              onChange={e => { setNewTicker(e.target.value); setLookupState('idle') }}
+              onKeyDown={e => e.key === 'Enter' && handleLookup()}
+            />
+            <button
+              onClick={handleLookup}
+              disabled={!newTicker.trim() || lookupState === 'loading'}
+              className='btn-primary px-3 text-xs'
+            >
+              {lookupState === 'loading' ? '取得中…' : '自動取得'}
+            </button>
+          </div>
+          {lookupState === 'err' && (
+            <p className='text-xs text-sell'>銘柄情報を取得できませんでした。手動で入力してください。</p>
+          )}
+          {/* 銘柄名・業種・市場 */}
+          <div className='grid grid-cols-2 md:grid-cols-4 gap-2'>
+            <input
+              className='input col-span-2 md:col-span-1'
+              placeholder='銘柄名'
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+            />
+            <select className='input' value={newSector} onChange={e => setNewSector(e.target.value)}>
+              {SECTOR_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select className='input' value={newMarket} onChange={e => setNewMarket(e.target.value as 'JP' | 'US')}>
+              <option value='JP'>日本株 (JP)</option>
+              <option value='US'>米国株 (US)</option>
+            </select>
+            <button
+              onClick={handleAddSymbol}
+              disabled={isPending}
+              className='btn-primary'
+            >
+              ウォッチリストに追加
+            </button>
+          </div>
         </div>
 
         {/* JP リスト */}

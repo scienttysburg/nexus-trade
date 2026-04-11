@@ -161,4 +161,5 @@ SECTOR_CODE: dict[str, str] = {
   'EV・自動車':       'ev',
   '決済・金融':       'fintech',
   'ゲーム・エンタメ': 'gaming',
+  '海運':             'shipping',
 }

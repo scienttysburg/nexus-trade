@@ -102,6 +102,30 @@ export interface AppSettings {
   webhook_score_threshold: number
 }
 
+export interface TradeRecord {
+  entry_date: string
+  exit_date: string
+  entry_price: number
+  exit_price: number
+  pnl_pct: number
+  result: 'win' | 'loss' | 'neutral'
+}
+
+export interface BacktestResult {
+  ticker: string
+  period_days: number
+  total_trades: number
+  win_trades: number
+  loss_trades: number
+  win_rate: number
+  avg_win_pct: number
+  avg_loss_pct: number
+  profit_factor: number
+  expected_value: number
+  max_drawdown: number
+  trades: TradeRecord[]
+}
+
 async function mutate<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch('/api/v1' + path, {
     method,
@@ -129,6 +153,7 @@ export const api = {
 
   // 銘柄管理
   getSymbols:    () => get<SymbolsData>('/symbols'),
+  lookupSymbol:  (ticker: string) => get<{ ticker: string; name: string; sector: string; market: string }>(`/symbols/lookup?ticker=${encodeURIComponent(ticker)}`),
   addSymbol:     (body: { ticker: string; name: string; sector: string; market: string }) =>
     mutate<{ ticker: string; status: string }>('POST', '/symbols', body),
   deleteSymbol:  (ticker: string) =>
@@ -140,4 +165,10 @@ export const api = {
   getSettings:    () => get<AppSettings>('/settings'),
   updateSettings: (patch: Partial<AppSettings>) =>
     mutate<AppSettings>('PATCH', '/settings', patch),
+
+  // バックテスト
+  backtest: (ticker: string, params?: { days?: number; hold_days?: number; buy_threshold?: number }) => {
+    const q = new URLSearchParams(params as Record<string, string> ?? {}).toString()
+    return get<BacktestResult>(`/backtest/${ticker}${q ? `?${q}` : ''}`)
+  },
 }

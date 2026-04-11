@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routers import indices, sectors, signals, stocks, news
 from routers import symbols as symbols_router
 from routers import settings as settings_router
+from routers import backtest as backtest_router
 from routers.ws import router as ws_router, broadcast_loop
 from services.market_data import start_background_refresh
 
@@ -41,8 +42,9 @@ app.include_router(sectors.router,          prefix='/api/v1/sectors',  tags=['se
 app.include_router(signals.router,          prefix='/api/v1/signals',  tags=['signals'])
 app.include_router(stocks.router,           prefix='/api/v1/stocks',   tags=['stocks'])
 app.include_router(news.router,             prefix='/api/v1/news',     tags=['news'])
-app.include_router(symbols_router.router,   prefix='/api/v1/symbols',  tags=['symbols'])
-app.include_router(settings_router.router,  prefix='/api/v1/settings', tags=['settings'])
+app.include_router(symbols_router.router,   prefix='/api/v1/symbols',   tags=['symbols'])
+app.include_router(settings_router.router,  prefix='/api/v1/settings',  tags=['settings'])
+app.include_router(backtest_router.router,  prefix='/api/v1/backtest',  tags=['backtest'])
 app.include_router(ws_router,               tags=['websocket'])
 
 
