@@ -119,10 +119,21 @@ def calc_sentiment(text: str) -> tuple[str, float]:
 # ───────────────────────── RSS フィード ─────────────────────────
 
 _RSS_FEEDS: list[dict] = [
-  {'url': 'https://feeds.reuters.com/reuters/JPBusinessNews', 'source': 'Reuters JP'},
-  {'url': 'https://feeds.reuters.com/reuters/businessNews',   'source': 'Reuters'},
-  {'url': 'https://rss.nikkei.com/n/cmt/content/rss1.rdf',    'source': '日経新聞'},
-  {'url': 'https://news.yahoo.co.jp/rss/topics/business.xml', 'source': 'Yahoo Finance JP'},
+  {'url': 'https://feeds.reuters.com/reuters/JPBusinessNews',             'source': 'Reuters JP',        'category': 'stock'},
+  {'url': 'https://feeds.reuters.com/reuters/businessNews',               'source': 'Reuters',           'category': 'stock'},
+  {'url': 'https://rss.nikkei.com/n/cmt/content/rss1.rdf',               'source': '日経新聞',           'category': 'stock'},
+  {'url': 'https://news.yahoo.co.jp/rss/topics/business.xml',            'source': 'Yahoo Finance JP',  'category': 'stock'},
+  {'url': 'https://feeds.reuters.com/reuters/technologyNews',             'source': 'Reuters Tech',      'category': 'stock'},
+  {'url': 'https://feeds.reuters.com/reuters/companyNews',                'source': 'Reuters Company',   'category': 'stock'},
+  {'url': 'https://cointelegraph.com/rss',                                'source': 'CoinTelegraph',     'category': 'crypto'},
+  {'url': 'https://decrypt.co/feed',                                      'source': 'Decrypt',           'category': 'crypto'},
+  {'url': 'https://bitcoinmagazine.com/.rss/full/',                       'source': 'Bitcoin Magazine', 'category': 'crypto'},
+]
+
+_CRYPTO_KEYWORDS = [
+  'bitcoin', 'btc', 'ethereum', 'eth', 'crypto', 'blockchain', 'defi', 'nft',
+  'solana', 'sol', 'xrp', 'ripple', 'binance', 'coinbase', 'stablecoin',
+  '仮想通貨', '暗号資産', 'ビットコイン', 'イーサリアム',
 ]
 
 
@@ -137,16 +148,28 @@ def _parse_date(entry) -> str:
   return datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')
 
 
+def _detect_category(text: str, feed_category: str) -> str:
+  """ニュースのカテゴリを判定: 'crypto' | 'stock'。"""
+  if feed_category == 'crypto':
+    return 'crypto'
+  t = text.lower()
+  if any(kw in t for kw in _CRYPTO_KEYWORDS):
+    return 'crypto'
+  return 'stock'
+
+
 def _fetch_rss(feed: dict) -> list[NewsItem]:
   try:
     parsed = feedparser.parse(feed['url'])
     items: list[NewsItem] = []
-    for i, entry in enumerate(parsed.entries[:8]):
+    feed_category = feed.get('category', 'stock')
+    for i, entry in enumerate(parsed.entries[:20]):
       title = getattr(entry, 'title', '') or ''
       summary = getattr(entry, 'summary', '') or ''
       text = title + ' ' + summary
       label, score = calc_sentiment(text)
       impact, is_noise = calc_impact(text)
+      category = _detect_category(text, feed_category)
       items.append(NewsItem(
         id=i,
         title=title.strip(),
@@ -156,6 +179,7 @@ def _fetch_rss(feed: dict) -> list[NewsItem]:
         source=feed['source'],
         impact=impact,
         is_noise=is_noise,
+        category=category,
       ))
     return items
   except Exception as e:
@@ -186,8 +210,8 @@ def fetch_market_news() -> list[NewsItem]:
       seen.add(key)
       deduped.append(item)
 
-  # id を振り直す
-  result = [NewsItem(**{**item.model_dump(), 'id': i}) for i, item in enumerate(deduped[:30])]
+  # id を振り直す (最大 120 件)
+  result = [NewsItem(**{**item.model_dump(), 'id': i}) for i, item in enumerate(deduped[:120])]
   cache.set('market_news', result, ttl=300)
   return result
 

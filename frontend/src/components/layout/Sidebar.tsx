@@ -4,12 +4,14 @@ import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
 
 const NAV = [
-  { href: '/',          label: 'Market Pulse',  sub: 'ダッシュボード',  icon: '◉' },
-  { href: '/screener',  label: 'Signal Radar',  sub: 'シグナル一覧',    icon: '⚡' },
-  { href: '/sectors',   label: 'Sector Matrix', sub: 'セクター分析',    icon: '▦' },
-  { href: '/news',      label: 'Market Intel',  sub: 'AIニュース',      icon: '◎' },
-  { href: '/watchlist', label: 'Watchlist',     sub: 'お気に入り',      icon: '★' },
-  { href: '/trade-log', label: 'Trade Log',     sub: 'ポジション管理',  icon: '₿' },
+  { href: '/',            label: 'Market Pulse',    sub: 'ダッシュボード',    icon: '◉' },
+  { href: '/screener',    label: 'Signal Radar',    sub: '株式シグナル',      icon: '⚡' },
+  { href: '/crypto',      label: 'Crypto Radar',    sub: '仮想通貨',          icon: '₿' },
+  { href: '/sectors',     label: 'Sector Matrix',   sub: 'セクター分析',      icon: '▦' },
+  { href: '/news',        label: 'Market Intel',    sub: 'AIニュース',        icon: '◎' },
+  { href: '/watchlist',   label: 'Watchlist',       sub: 'お気に入り',        icon: '★' },
+  { href: '/simulation',  label: 'Simulation Desk', sub: 'デモ売買',          icon: '◈' },
+  { href: '/trade-log',   label: 'Trade Log',       sub: 'ポジション管理',    icon: '▣' },
 ]
 
 export default function Sidebar() {

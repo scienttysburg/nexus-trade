@@ -50,6 +50,7 @@ export interface NewsItem {
   source: string
   impact: 'high' | 'medium' | 'low'
   is_noise: boolean
+  category: 'stock' | 'crypto'
 }
 
 export interface TradePosition {
@@ -146,6 +147,63 @@ export interface TradeRecord {
   result: 'win' | 'loss' | 'neutral'
 }
 
+export interface PaperPosition {
+  id: number
+  ticker: string
+  name: string
+  asset_type: string
+  entry_price: number
+  shares: number
+  created_at: string
+  current_price: number | null
+  pnl_amount: number | null
+  pnl_pct: number | null
+}
+
+export interface PaperAccount {
+  cash_balance: number
+  positions_value: number
+  total_assets: number
+  unrealized_pnl: number
+  realized_pnl: number
+  total_pnl: number
+  total_trades: number
+  return_pct: number
+  initial_balance: number
+  positions: PaperPosition[]
+}
+
+export interface PaperOrder {
+  id: number
+  ticker: string
+  name: string
+  asset_type: string
+  order_type: string
+  price: number
+  shares: number
+  amount: number
+  pnl: number | null
+  executed_at: string
+}
+
+export interface PaperOrderRequest {
+  ticker: string
+  name?: string
+  order_type: 'buy' | 'sell'
+  shares?: number
+  amount?: number
+}
+
+export interface PaperOrderResult {
+  order_id: number
+  type: string
+  ticker: string
+  price: number
+  shares: number
+  amount: number
+  realized_pnl?: number
+}
+
 export interface BacktestResult {
   ticker: string
   period_days: number
@@ -209,6 +267,20 @@ export const api = {
 
   // ニュース (curated)
   curatedNews: () => get<NewsItem[]>('/news/market'),
+  marketNewsPaged: (page: number, limit: number, category: string) => {
+    const q = new URLSearchParams({ page: String(page), limit: String(limit), category }).toString()
+    return get<NewsItem[]>(`/news/market?${q}`)
+  },
+
+  // 仮想通貨
+  cryptoSignals: () => get<SignalData[]>('/crypto'),
+
+  // Paper Trading
+  paperAccount:  () => get<PaperAccount>('/paper/account'),
+  paperOrders:   (limit?: number) => get<PaperOrder[]>(`/paper/orders${limit ? `?limit=${limit}` : ''}`),
+  paperOrder:    (body: PaperOrderRequest) =>
+    mutate<PaperOrderResult>('POST', '/paper/order', body),
+  paperReset:    () => mutate<{ status: string; initial_balance: number }>('POST', '/paper/reset'),
 
   // Trade Log
   getPositions:    (status?: 'open' | 'closed') => {

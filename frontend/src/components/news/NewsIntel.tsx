@@ -1,25 +1,24 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import clsx from 'clsx'
 import type { NewsItem } from '@/lib/api'
+
+const PAGE_SIZE = 20
 
 const IMPACT_STYLE: Record<string, string> = {
   high:   'bg-[#3d1818] text-sell border border-sell/50',
   medium: 'bg-[#2d2a1a] text-hold border border-hold/30',
   low:    'bg-[#161b22] text-[#8b949e] border border-dim',
 }
-const IMPACT_LABEL: Record<string, string> = {
-  high: '高', medium: '中', low: '低',
-}
+const IMPACT_LABEL: Record<string, string> = { high: '高', medium: '中', low: '低' }
 const SENTIMENT_COLOR: Record<string, string> = {
-  positive: 'text-buy',
-  negative: 'text-sell',
-  neutral:  'text-[#8b949e]',
+  positive: 'text-buy', negative: 'text-sell', neutral: 'text-[#8b949e]',
 }
 const SENTIMENT_ICON: Record<string, string> = {
   positive: '▲', negative: '▼', neutral: '●',
 }
 
+type CategoryTab = 'all' | 'stock' | 'crypto' | 'high'
 type ImpactFilter = 'all' | 'high' | 'medium' | 'low'
 type SentimentFilter = 'all' | 'positive' | 'negative' | 'neutral'
 
@@ -30,18 +29,88 @@ const btn = (active: boolean) => clsx(
     : 'text-[#8b949e] border-dim hover:text-[#e6edf3] hover:border-[#58a6ff]/30'
 )
 
+const CATEGORY_TABS: { key: CategoryTab; label: string }[] = [
+  { key: 'all',    label: 'All' },
+  { key: 'high',   label: 'High Impact' },
+  { key: 'stock',  label: '株式' },
+  { key: 'crypto', label: 'Crypto' },
+]
+
 export default function NewsIntel({ initialNews }: { initialNews: NewsItem[] }) {
+  const [category, setCategory] = useState<CategoryTab>('all')
   const [impact, setImpact] = useState<ImpactFilter>('all')
   const [sentiment, setSentiment] = useState<SentimentFilter>('all')
   const [showNoise, setShowNoise] = useState(false)
+  const [page, setPage] = useState(1)
+  const [extraNews, setExtraNews] = useState<NewsItem[]>([])
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const fetchedPages = useRef<Set<number>>(new Set([1]))
 
-  const news = useMemo(() => {
-    let data = initialNews
+  // カテゴリタブ切り替え時はサーバーからフェッチ
+  const handleCategoryChange = useCallback(async (cat: CategoryTab) => {
+    setCategory(cat)
+    setPage(1)
+    setExtraNews([])
+    setHasMore(true)
+    fetchedPages.current = new Set([1])
+  }, [])
+
+  // クライアントサイドフィルタリング (初期データ + 追加ロード分)
+  const allNews = useMemo(() => {
+    const base = category === 'all' ? initialNews : []
+    return [...base, ...extraNews]
+  }, [initialNews, extraNews, category])
+
+  const filtered = useMemo(() => {
+    let data = allNews
+    if (category === 'high') data = data.filter(n => !n.is_noise && n.impact === 'high')
+    else if (category === 'stock') data = data.filter(n => n.category === 'stock')
+    else if (category === 'crypto') data = data.filter(n => n.category === 'crypto')
     if (!showNoise) data = data.filter(n => !n.is_noise)
     if (impact !== 'all') data = data.filter(n => n.impact === impact)
     if (sentiment !== 'all') data = data.filter(n => n.sentiment === sentiment)
     return data
-  }, [initialNews, impact, sentiment, showNoise])
+  }, [allNews, category, impact, sentiment, showNoise])
+
+  const visibleNews = filtered.slice(0, page * PAGE_SIZE)
+  const canShowMore = visibleNews.length < filtered.length || hasMore
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore) return
+    const nextPage = page + 1
+
+    // まだフェッチしていないページはサーバーから取得
+    if (!fetchedPages.current.has(nextPage)) {
+      setLoadingMore(true)
+      try {
+        const q = new URLSearchParams({
+          page: String(nextPage),
+          limit: String(PAGE_SIZE),
+          category,
+        }).toString()
+        const res = await fetch(`/api/v1/news/market?${q}`)
+        if (res.ok) {
+          const data: NewsItem[] = await res.json()
+          if (data.length === 0) {
+            setHasMore(false)
+          } else {
+            setExtraNews(prev => [...prev, ...data])
+            fetchedPages.current.add(nextPage)
+            if (data.length < PAGE_SIZE) setHasMore(false)
+          }
+        } else {
+          setHasMore(false)
+        }
+      } catch {
+        setHasMore(false)
+      } finally {
+        setLoadingMore(false)
+      }
+    }
+
+    setPage(nextPage)
+  }, [loadingMore, page, category])
 
   const highCount = initialNews.filter(n => !n.is_noise && n.impact === 'high').length
 
@@ -57,6 +126,27 @@ export default function NewsIntel({ initialNews }: { initialNews: NewsItem[] }) 
             )}
           </p>
         </div>
+      </div>
+
+      {/* カテゴリタブ */}
+      <div className='flex gap-2 border-b border-dim pb-2'>
+        {CATEGORY_TABS.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => handleCategoryChange(key)}
+            className={clsx(
+              'px-4 py-1.5 text-xs font-medium rounded-t-md transition-colors border-b-2 -mb-[2px]',
+              category === key
+                ? 'text-accent border-accent'
+                : 'text-[#8b949e] border-transparent hover:text-[#e6edf3] hover:border-dim'
+            )}
+          >
+            {label}
+            {key === 'crypto' && (
+              <span className='ml-1 text-[9px] text-[#f0883e] border border-[#f0883e]/30 rounded px-1'>₿</span>
+            )}
+          </button>
+        ))}
       </div>
 
       {/* フィルターバー */}
@@ -86,18 +176,18 @@ export default function NewsIntel({ initialNews }: { initialNews: NewsItem[] }) 
           />
           ノイズを含む
         </label>
-        <span className='text-xs text-[#8b949e] font-mono'>{news.length} 件</span>
+        <span className='text-xs text-[#8b949e] font-mono'>{visibleNews.length} / {filtered.length} 件</span>
       </div>
 
       {/* ニュースリスト */}
       <div className='flex flex-col gap-2'>
-        {news.length === 0 ? (
+        {visibleNews.length === 0 ? (
           <div className='bg-card border border-dim rounded-lg py-16 text-center text-xs text-[#8b949e]'>
             条件に合うニュースがありません
           </div>
-        ) : news.map(n => (
+        ) : visibleNews.map(n => (
           <div
-            key={n.id}
+            key={`${n.id}-${n.source}`}
             className='bg-card border border-dim rounded-lg p-4 flex items-start gap-3 hover:bg-[#1c2128] transition-colors'
           >
             <div className='flex flex-col items-center gap-1 shrink-0 pt-0.5'>
@@ -107,6 +197,9 @@ export default function NewsIntel({ initialNews }: { initialNews: NewsItem[] }) 
               )}>
                 {IMPACT_LABEL[n.impact]}
               </span>
+              {n.category === 'crypto' && (
+                <span className='text-[9px] text-[#f0883e] border border-[#f0883e]/30 bg-[#f0883e]/10 rounded px-1'>₿</span>
+              )}
             </div>
             <div className='flex-1 min-w-0'>
               <p className='text-sm text-[#e6edf3] leading-snug'>{n.title}</p>
@@ -123,6 +216,24 @@ export default function NewsIntel({ initialNews }: { initialNews: NewsItem[] }) 
           </div>
         ))}
       </div>
+
+      {/* もっと見る / ローディング */}
+      {canShowMore && (
+        <div className='flex justify-center py-2'>
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className={clsx(
+              'px-6 py-2 text-xs rounded-md border transition-colors',
+              loadingMore
+                ? 'border-dim text-[#8b949e] cursor-not-allowed'
+                : 'border-accent/30 text-accent hover:bg-accent/10'
+            )}
+          >
+            {loadingMore ? '読み込み中…' : 'もっと見る'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

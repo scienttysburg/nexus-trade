@@ -70,6 +70,7 @@ class NewsItem(BaseModel):
   source: str
   impact: str = 'low'        # 'high' | 'medium' | 'low'
   is_noise: bool = False
+  category: str = 'stock'    # 'stock' | 'crypto'
 
 
 class TradePositionCreate(BaseModel):
